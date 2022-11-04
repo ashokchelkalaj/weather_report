@@ -28,7 +28,7 @@ steps:
   displayName: 'NuGet restore packages'
   inputs:
     command: 'restore'
-    restoreSolution: '$(solution)'
+    restoreSolution: '**/*.sln'
     feedsToUse: 'select'
 
 - task: DotNetCoreCLI@2
