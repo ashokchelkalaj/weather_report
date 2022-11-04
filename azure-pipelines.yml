@@ -73,7 +73,7 @@ stages:
                 script: |
                   sudo apt-get update 
                   sudo apt-get install -y nginx
-                  sudo apt install unzip
+                  pwd
                   
                   sudo rm -rf /etc/nginx/sites-available/default
                   sudo touch /etc/nginx/sites-available/default
@@ -110,8 +110,8 @@ stages:
                   Description=My first .NET Core application on Ubuntu
                   
                   [Service]
-                  WorkingDirectory= /home/azureuser/azagent/_work/1/drop/
-                  ExecStart=/usr/bin/dotnet /home/azureuser/azagent/_work/1/drop/WebApplication3.dll
+                  WorkingDirectory= /home/azureuser/azagent/_work/2/
+                  ExecStart=/usr/bin/dotnet /home/azureuser/azagent/_work/2/drop/WebApplication3.dll
                   Restart=always
                   RestartSec=10 # Restart service after 10 seconds if dotnet service crashes
                   SyslogIdentifier=offershare-web-app
