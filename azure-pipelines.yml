@@ -1,57 +1,129 @@
-# ASP.NET
-# Build and test ASP.NET projects.
-# Add steps that publish symbols, save build artifacts, deploy, and more:
-# https://docs.microsoft.com/azure/devops/pipelines/apps/aspnet/build-aspnet-4
+# Starter pipeline
+# Start with a minimal pipeline that you can customize to build and deploy your code.
+# Add steps that build, run tests, deploy, and more:
+# https://aka.ms/yaml
 
 trigger:
-- main
-
-pool:
-  vmImage: 'windows-latest'
-
-variables:
-  buildPlatform: 'Any CPU'
-  buildConfiguration: 'Release'
-
-steps:
-
-
-
-
-
-- task: NuGetToolInstaller@1
-  name: 'NuGetToolInstaller'
-  displayName: 'NuGet tool installer'
-
-- task: NuGetCommand@2
-  name: 'NuGetRestore'
-  displayName: 'NuGet restore packages'
-  inputs:
-    command: 'restore'
-    restoreSolution: '**/*.sln'
-    feedsToUse: 'select'
-
-- task: DotNetCoreCLI@2
-  inputs:
-    command: 'restore'
-    projects: '**/*.csproj'
-    feedsToUse: 'select'
-  
-
-- task: DotNetCoreCLI@2
-  inputs:
-    command: 'build'
-    projects: '**/*.csproj'
-    arguments: '--configuration $(BuildConfiguration)'
-- task: DotNetCoreCLI@2
-  inputs:
-    command: 'publish'
-    publishWebProjects: true
-    arguments: '--configuration $(BuildConfiguration) --output $(build.artifactstagingdirectory)'
-    zipAfterPublish: true
+ branches:
+   include:
+     - main
+stages:
+  - stage: Build_stage
+    displayName: Build
+    jobs:
+      - job:
+        displayName: web app
+        pool:
+          vmImage: ubuntu-latest
+        variables:
+          BuildConfiguration: Release
+        steps:
+        - task: DotNetCoreCLI@2
+          displayName: restore
+          inputs:
+            command: 'restore'
+            projects: '**/*.csproj'
+            feedsToUse: 'select'
+            
+        - task: DotNetCoreCLI@2
+          displayName: build
+          inputs:
+            command: 'build'
+            projects: '**/*.csproj'
+            arguments: '--configuration $(BuildConfiguration)'
           
-- task: PublishBuildArtifacts@1
-  inputs:
-    PathtoPublish: '$(Build.ArtifactStagingDirectory)'
-    ArtifactName: 'drop'
-    publishLocation: 'Container'
+        - task: DotNetCoreCLI@2
+          displayName: publish
+          inputs:
+            command: 'publish'
+            publishWebProjects: true
+            arguments: '--configuration $(BuildConfiguration) --output $(build.artifactstagingdirectory)'
+            zipAfterPublish: true
+          
+        - task: PublishBuildArtifacts@1
+          displayName: PublishBuildArtifacts
+          inputs:
+            PathtoPublish: '$(Build.ArtifactStagingDirectory)'
+            ArtifactName: 'drop'
+            publishLocation: Container
+        
+       
+  - stage: DeployWebsite
+    displayName: 'Deploy website'
+    dependsOn: 'Build_stage'
+    condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
+    
+    jobs:
+      - job: 
+      - deployment: DeployWebsite
+        displayName: 'Deploy website'
+        environment: 
+         name: lin
+         resourceType: VirtualMachine
+        strategy:
+         runOnce:
+           deploy:
+            steps:
+            - download: current
+              artifact:  drop
+            -  script: |
+         
+            - task: CmdLine@2
+              inputs:
+                script: |
+                  sudo apt-get update 
+                  sudo apt-get install -y nginx
+                  sudo apt install unzip
+                  
+                  sudo rm -rf /etc/nginx/sites-available/default
+                  sudo touch /etc/nginx/sites-available/default
+                  sudo chmod 777 /etc/nginx/sites-available/default
+                  cat >> /etc/nginx/sites-available/default <<'EOF'
+                  server {
+                   listen 80;
+                   location / {
+                   proxy_pass http://localhost:5000;
+                   proxy_http_version 1.1;
+                   proxy_set_header Upgrade $http_upgrade;
+                   proxy_set_header Connection keep-alive;
+                   proxy_set_header Host $host;
+                   proxy_cache_bypass $http_upgrade;
+                   proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                   proxy_set_header X-Forwarded-Proto $scheme;
+                   }
+                  }
+                  
+                  #dfghjkl
+                  EOF
+                  
+                  
+                  sudo nginx -t
+                  
+                  sudo nginx -s reload
+                  
+                  sudo rm -rf  /etc/systemd/system/WebApplication3.service
+                  sudo touch /etc/systemd/system/WebApplication3.service
+                  sudo chmod 777 /etc/systemd/system/WebApplication3.service
+                  
+                  cat >> /etc/systemd/system/WebApplication3.service <<'EOF'
+                  [Unit]
+                  Description=My first .NET Core application on Ubuntu
+                  
+                  [Service]
+                  WorkingDirectory= /home/azureuser/azagent/_work/1/drop/
+                  ExecStart=/usr/bin/dotnet /home/azureuser/azagent/_work/1/drop/WebApplication3.dll
+                  Restart=always
+                  RestartSec=10 # Restart service after 10 seconds if dotnet service crashes
+                  SyslogIdentifier=offershare-web-app
+                  Environment=ASPNETCORE_ENVIRONMENT=Development
+                  
+                  [Install]
+                  WantedBy=multi-user.target
+                  EOF
+                  
+                  
+                  sudo systemctl enable WebApplication3.service
+                  
+                  sudo systemctl start WebApplication3.service
+                  
+                   sudo systemctl status WebApplication3.service
