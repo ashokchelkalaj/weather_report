@@ -24,6 +24,17 @@ stages:
             command: 'restore'
             projects: '**/*.csproj'
             feedsToUse: 'select'
+        - task: NuGetToolInstaller@1
+          name: 'NuGetToolInstaller'
+          displayName: 'NuGet tool installer'
+
+        - task: NuGetCommand@2
+          name: 'NuGetRestore'
+          displayName: 'NuGet restore packages'
+          inputs:
+           command: 'restore'
+           restoreSolution: '**/*.sln'
+           feedsToUse: 'select'
             
         - task: DotNetCoreCLI@2
           displayName: build
