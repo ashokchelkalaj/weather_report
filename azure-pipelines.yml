@@ -33,7 +33,7 @@ stages:
           displayName: 'NuGet restore packages'
           inputs:
            command: 'restore'
-           restoreSolution: '**/*.sln'
+           restoreSolution: '**/*.csproj'
            feedsToUse: 'select'
             
         - task: DotNetCoreCLI@2
